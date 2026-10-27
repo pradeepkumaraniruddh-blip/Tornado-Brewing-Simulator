@@ -1,0 +1,243 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tornado Brewing Simulator</title>
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #08111f;
+  color: #eaf4ff;
+  padding: 16px;
+}
+h1 { color: #73d5ff; }
+.panel {
+  background: #142238;
+  border: 1px solid #2c4666;
+  border-radius: 14px;
+  padding: 16px;
+  margin: 12px 0;
+}
+button, select {
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  margin: 5px;
+  background: #43b8e8;
+  color: #07111d;
+  font-weight: bold;
+}
+input { width: 100%; }
+.sky {
+  height: 260px;
+  background: linear-gradient(#273a54, #64778b, #1b293b);
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+}
+.cloud {
+  position: absolute;
+  top: 30px;
+  left: 20%;
+  width: 180px;
+  height: 70px;
+  background: #b5c4d1;
+  border-radius: 50%;
+  box-shadow: 35px -20px 0 #d0d9e0,
+              70px 0 0 #a5b4c2,
+              100px 15px 0 #8798a9;
+  animation: drift 5s infinite alternate ease-in-out;
+}
+.funnel {
+  position: absolute;
+  top: 95px;
+  left: 48%;
+  width: 8px;
+  height: 0;
+  background: #c9d4df;
+  clip-path: polygon(0 0,100% 0,65% 100%,35% 100%);
+  transition: height 1s, width 1s;
+  transform: translateX(-50%);
+  opacity: .9;
+}
+.rain {
+  position: absolute;
+  inset: 110px 0 0;
+  background: repeating-linear-gradient(
+    105deg, transparent 0 16px,
+    #d5e9ff 17px 19px, transparent 20px 32px
+  );
+  opacity: 0;
+  animation: rain .3s linear infinite;
+}
+@keyframes drift {
+  from { transform: translateX(-10px); }
+  to { transform: translateX(30px); }
+}
+@keyframes rain {
+  from { background-position: 0 0; }
+  to { background-position: -20px 40px; }
+}
+label { display: block; margin-top: 14px; }
+small { color: #b7c8dc; }
+</style>
+</head>
+<body>
+
+<h1>🌪️ Tornado Brewing Lab</h1>
+<p>Build a storm step by step and observe how changing atmospheric conditions affects it.</p>
+
+<div class="panel">
+  <h2>Storm Simulator</h2>
+  <div class="sky">
+    <div class="cloud"></div>
+    <div class="rain" id="rain"></div>
+    <div class="funnel" id="funnel"></div>
+  </div>
+  <h3 id="stormStatus">Stage 1: Warm, moist air</h3>
+  <p id="description">Begin with warm, moist air near the ground.</p>
+  <button onclick="previousStep()">← Previous</button>
+  <button onclick="nextStep()">Next Step →</button>
+  <button onclick="resetStorm()">Reset</button>
+</div>
+
+<div class="panel">
+  <h2>Atmospheric Conditions</h2>
+
+  <label>CAPE: <span id="capeValue">1000</span> J/kg</label>
+  <input id="cape" type="range" min="0" max="5000" value="1000"
+  oninput="updateValues()">
+
+  <label>CIN: <span id="cinValue">50</span> J/kg</label>
+  <input id="cin" type="range" min="0" max="300" value="50"
+  oninput="updateValues()">
+
+  <label>Wind Shear: <span id="shearValue">15</span> m/s</label>
+  <input id="shear" type="range" min="0" max="40" value="15"
+  oninput="updateValues()">
+
+  <label>Helicity: <span id="helicityValue">100</span> m²/s²</label>
+  <input id="helicity" type="range" min="0" max="500" value="100"
+  oninput="updateValues()">
+
+  <label>Dew Point: <span id="dewValue">18</span> °C</label>
+  <input id="dew" type="range" min="-5" max="30" value="18"
+  oninput="updateValues()">
+
+  <h3 id="assessment">Storm assessment: Developing</h3>
+  <p id="science"></p>
+</div>
+
+<div class="panel">
+  <h2>Quick Start</h2>
+  <button onclick="preset('ordinary')">Ordinary Storm</button>
+  <button onclick="preset('supercell')">Supercell Setup</button>
+  <button onclick="preset('weak')">Weak Storm</button>
+  <p><small>Educational simulation only. It does not predict real tornadoes or use live weather data.</small></p>
+</div>
+
+<script>
+let step = 0;
+
+const stages = [
+  {
+    title: "Stage 1: Warm, moist air",
+    text: "Warm, humid air near the surface can provide fuel for thunderstorms."
+  },
+  {
+    title: "Stage 2: Lift and instability",
+    text: "Air rises when it is warmer and less dense than its surroundings. CAPE indicates potential buoyant energy; CIN can inhibit rising air."
+  },
+  {
+    title: "Stage 3: A rotating thunderstorm",
+    text: "Wind shear changes wind speed or direction with height. In some storms, it helps organize a rotating updraft."
+  },
+  {
+    title: "Stage 4: Tornado ingredients",
+    text: "Tornado formation requires complex storm-scale processes. These ingredients alone cannot guarantee a tornado."
+  }
+];
+
+function nextStep() {
+  step = Math.min(step + 1, stages.length - 1);
+  showStage();
+}
+function previousStep() {
+  step = Math.max(step - 1, 0);
+  showStage();
+}
+function showStage() {
+  document.getElementById("stormStatus").textContent = stages[step].title;
+  document.getElementById("description").textContent = stages[step].text;
+  updateValues();
+}
+function resetStorm() {
+  step = 0;
+  document.getElementById("cape").value = 1000;
+  document.getElementById("cin").value = 50;
+  document.getElementById("shear").value = 15;
+  document.getElementById("helicity").value = 100;
+  document.getElementById("dew").value = 18;
+  showStage();
+}
+function preset(type) {
+  if (type === "ordinary") {
+    cape.value = 1000; cin.value = 50;
+    shear.value = 15; helicity.value = 100; dew.value = 18;
+  } else if (type === "supercell") {
+    cape.value = 3000; cin.value = 25;
+    shear.value = 30; helicity.value = 300; dew.value = 22;
+  } else {
+    cape.value = 300; cin.value = 150;
+    shear.value = 5; helicity.value = 20; dew.value = 8;
+  }
+  updateValues();
+}
+function updateValues() {
+  const cape = Number(document.getElementById("cape").value);
+  const cin = Number(document.getElementById("cin").value);
+  const shear = Number(document.getElementById("shear").value);
+  const helicity = Number(document.getElementById("helicity").value);
+  const dew = Number(document.getElementById("dew").value);
+
+  document.getElementById("capeValue").textContent = cape;
+  document.getElementById("cinValue").textContent = cin;
+  document.getElementById("shearValue").textContent = shear;
+  document.getElementById("helicityValue").textContent = helicity;
+  document.getElementById("dewValue").textContent = dew;
+
+  let score = 0;
+  if (cape > 1000) score++;
+  if (cin < 100) score++;
+  if (shear > 15) score++;
+  if (helicity > 150) score++;
+  if (dew > 15) score++;
+
+  const funnel = document.getElementById("funnel");
+  const rain = document.getElementById("rain");
+
+  funnel.style.height = (step * 35 + (score > 3 ? 35 : 0)) + "px";
+  funnel.style.width = (score > 3 ? 28 : score > 1 ? 16 : 8) + "px";
+  rain.style.opacity = step >= 1 ? ".35" : "0";
+
+  let assessment = "Limited ingredients";
+  if (score >= 4) assessment = "Several favourable ingredients";
+  else if (score >= 2) assessment = "Some storm ingredients present";
+
+  document.getElementById("assessment").textContent =
+    "Storm assessment: " + assessment;
+
+  document.getElementById("science").textContent =
+    "This simplified score is for learning, not a forecast. CAPE: " +
+    cape + " J/kg; CIN: " + cin + " J/kg; shear: " + shear +
+    " m/s; helicity: " + helicity + " m²/s²; dew point: " +
+    dew + " °C. No combination of these sliders guarantees a tornado.";
+}
+showStage();
+</script>
+
+</body>
+</html>
